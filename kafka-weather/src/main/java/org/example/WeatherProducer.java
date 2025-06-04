@@ -34,21 +34,18 @@ public class WeatherProducer {
         KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(properties);
 
         try (ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor()) {
-            Runnable task = new Runnable() {
-                @Override
-                public void run () {
-                    LOGGER.info("Weather producer running. Fetching every 1 minute...");
-                    try {
-                        ProducerRecord<String, String> record = null;
-                        List<String> forecastList = OpenMeteoClient.getHourlyWeatherData(40.46, 24.36);
-                        for (String jsonData : forecastList) {
-                            record = new ProducerRecord<>(TOPIC, jsonData);
-                            kafkaProducer.send(record);
-                            LOGGER.info("Sent to Kafka: {}", jsonData);
-                        }
-                    } catch (IOException e) {
-                        LOGGER.error("Error while producing", e);
+            Runnable task = ()->{
+                LOGGER.info("Weather producer running. Fetching every 1 minute...");
+                try {
+                    ProducerRecord<String, String> record;
+                    List<String> forecastList = OpenMeteoClient.getHourlyWeatherData(40.46, 24.36);
+                    for (String jsonData : forecastList) {
+                        record = new ProducerRecord<>(TOPIC, jsonData);
+                        kafkaProducer.send(record);
+                        LOGGER.info("Sent to Kafka: {}", jsonData);
                     }
+                } catch (IOException e) {
+                    LOGGER.error("Error while producing", e);
                 }
             };
 
