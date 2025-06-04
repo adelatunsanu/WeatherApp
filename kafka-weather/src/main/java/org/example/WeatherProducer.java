@@ -31,9 +31,8 @@ public class WeatherProducer {
         properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 
-        KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(properties);
-
-        try (ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor()) {
+        try (ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+             KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(properties)) {
             Runnable task = ()->{
                 LOGGER.info("Weather producer running. Fetching every 1 minute...");
                 try {
