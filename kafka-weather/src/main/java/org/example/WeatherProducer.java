@@ -36,12 +36,16 @@ public class WeatherProducer {
             Runnable task = ()->{
                 LOGGER.info("Weather producer running. Fetching every 1 minute...");
                 try {
-                    ProducerRecord<String, String> record;
-                    List<String> forecastList = OpenMeteoClient.getHourlyWeatherData(40.46, 24.36);
-                    for (String jsonData : forecastList) {
-                        record = new ProducerRecord<>(TOPIC, jsonData);
-                        kafkaProducer.send(record);
-                        LOGGER.info("Sent to Kafka: {}", jsonData);
+                    List<Location> locations = getLocations();
+                    for (Location location:locations) {
+                        List<String> forecastList = OpenMeteoClient.getHourlyWeatherData(location.latitude(), location.longitude());
+                        ProducerRecord<String, String> record;
+
+                        for (String jsonData : forecastList) {
+                            record = new ProducerRecord<>(TOPIC, location.name(), jsonData);
+                            kafkaProducer.send(record);
+                            LOGGER.info("Sent to Kafka for location {} : {}", location.name(), jsonData);
+                        }
                     }
                 } catch (IOException e) {
                     LOGGER.error("Error while producing", e);
@@ -54,5 +58,14 @@ public class WeatherProducer {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    private static List<Location> getLocations(){
+        return List.of(
+                new Location("Thassos - Skala Rachoniou", 40.7794, 24.6124),
+                new Location("Athens", 37.9838, 23.7275),
+                new Location("Santorini", 36.393154, 25.461510),
+                new Location("Thessaloniki", 40.6401, 22.9444)
+        );
     }
 }
