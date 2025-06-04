@@ -31,8 +31,8 @@ public class OpenMeteoClient {
      *
      * @param latitude  the geographic latitude.
      * @param longitude the geographic longitude.
-     * @return a {@link JsonNode} representing the parsed JSON response from the Open-Meteo API
-     * @throws IOException if an I/O error occurs during the HTTP request or while reading the response
+     * @return a {@link JsonNode} representing the parsed JSON response from the Open-Meteo API.
+     * @throws IOException if an I/O error occurs during the HTTP request or while reading the response.
      *
      * @see <a href="https://open-meteo.com/en/docs">Open-Meteo API Documentation</a>
      */
@@ -49,5 +49,36 @@ public class OpenMeteoClient {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(httpConnection.getInputStream()))) {
             return objectMapper.readTree(reader);
         }
+    }
+
+    /**
+     * Retrieves a list of hourly weather forecast data from the Open-Meteo API for a specific location.
+     * <p>
+     * This method fetches and parses the hourly weather forecast, including timestamps, temperature (in °C),
+     * and precipitation (in mm). Each hourly data point is returned as a JSON-formatted string.
+     *
+     * @param latitude  the geographic latitude.
+     * @param longitude the geographic longitude.
+     * @return a list of strings, each representing one hour of forecast in JSON format.
+     * @throws IOException if the weather data cannot be retrieved or parsed (e.g., network issues or malformed response)
+     */
+    public static List<String> getHourlyWeatherData(double latitude, double longitude) throws IOException {
+        List<String> forecastList = new ArrayList<>();
+
+        JsonNode root = fetchJsonNode(latitude, longitude);
+        JsonNode times = root.path("hourly").path("time");
+        JsonNode temps = root.path("hourly").path("temperature_2m");
+        JsonNode rain = root.path("hourly").path("precipitation");
+
+        for (int i = 0; i < times.size(); i++) {
+            String json = String.format(
+                    "{\"time\":\"%s\", \"temperature\":%.2f, \"precipitation\":%.2f}",
+                    times.get(i).asText(),
+                    temps.get(i).asDouble(),
+                    rain.get(i).asDouble()
+            );
+            forecastList.add(json);
+        }
+        return forecastList;
     }
 }
