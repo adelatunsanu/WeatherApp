@@ -52,8 +52,11 @@ public class WeatherProducer {
                 }
             };
 
-
             executorService.scheduleAtFixedRate(task, 0, 1, TimeUnit.MINUTES);
+
+            new CountDownLatch(1).await(); // Keep the main thread alive
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 }
