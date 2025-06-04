@@ -47,7 +47,7 @@ public class WeatherProducer {
                             LOGGER.info("Sent to Kafka: {}", jsonData);
                         }
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        LOGGER.error("Error while producing", e);
                     }
                 }
             };
