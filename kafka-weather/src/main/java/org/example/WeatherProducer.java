@@ -14,7 +14,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * The Kafka Producer.
+ * The {@code WeatherProducer} class is a Kafka producer that fetches hourly weather data
+ * from the Open-Meteo API for a predefined list of locations and sends the data to a Kafka topic.
+ * <p>
+ * The producer is scheduled to run every minute, pulling fresh data and publishing it to the
+ * topic.
  */
 public class WeatherProducer {
 
