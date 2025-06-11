@@ -12,7 +12,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
 
-
+/**
+ * The {@code WeatherConsumer} class is a Kafka consumer that subscribes to a topic and logs received weather data.
+ */
 public class WeatherConsumer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WeatherConsumer.class.getSimpleName());
@@ -38,7 +40,7 @@ public class WeatherConsumer {
                     LOGGER.warn("Shutdown hook interrupted", exception);
                 }
             }));
-            
+
             kafkaConsumer.subscribe(List.of(TOPIC), new ConsumerRebalanceListener() {
 
                 @Override
