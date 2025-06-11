@@ -1,6 +1,8 @@
 package org.example;
 
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,11 +29,7 @@ public class WeatherProducer {
     private static final String KAFKA_SERVER = "localhost:9092";
 
     public static void main (String[] args) {
-
-        Properties properties = new Properties();
-        properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_SERVER);
-        properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        Properties properties = getProperties();
 
         try (ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
              KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(properties)) {
@@ -79,5 +77,13 @@ public class WeatherProducer {
                 new Location("Santorini", 36.393154, 25.461510),
                 new Location("Thessaloniki", 40.6401, 22.9444)
         );
+    }
+
+    private static Properties getProperties () {
+        Properties properties = new Properties();
+        properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_SERVER);
+        properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        return properties;
     }
 }
