@@ -30,20 +30,18 @@ public class WeatherConsumer {
         try (KafkaConsumer<String, String> kafkaConsumer = new KafkaConsumer<>(properties)) {
             final Thread mainThread = Thread.currentThread();
 
-            Runtime.getRuntime().addShutdownHook(new Thread() {
-                public void run () {
-                    LOGGER.info("Shutdown detected. Triggering Kafka consumer wakeup...");
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                LOGGER.info("Shutdown detected. Triggering Kafka consumer wakeup...");
 
-                    kafkaConsumer.wakeup(); // triggers WakeupException in the consumer.poll()
+                kafkaConsumer.wakeup(); // triggers WakeupException in the consumer.poll()
 
-                    try {
-                        mainThread.join(); // Wait for main thread to finish
-                    } catch (InterruptedException exception) {
-                        Thread.currentThread().interrupt();
-                        LOGGER.warn("Shutdown hook interrupted", exception);
-                    }
+                try {
+                    mainThread.join(); // Wait for main thread to finish
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    LOGGER.warn("Shutdown hook interrupted", exception);
                 }
-            });
+            }));
 
             kafkaConsumer.subscribe(List.of(TOPIC));
 
