@@ -48,14 +48,11 @@ public class WeatherProducer {
                     for (String jsonData : forecastList) {
                         ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC, locationName, jsonData);
 
-                        kafkaProducer.send(record, new Callback() {
-                            @Override
-                            public void onCompletion (RecordMetadata recordMetadata, Exception exception) {
-                                if (exception == null){
-                                    LOGGER.info("Sent weather data: {} ----> Partition: {} Offset: {} Timestamp: {}", jsonData, recordMetadata.partition(), recordMetadata.offset(), recordMetadata.timestamp());
-                                } else{
-                                    LOGGER.error("Failed to send weather data for location: {}", locationName, exception);
-                                }
+                        kafkaProducer.send(record, (recordMetadata, exception) -> {
+                            if (exception == null){
+                                LOGGER.info("Sent weather data: {} ----> Partition: {} Offset: {} Timestamp: {}", jsonData, recordMetadata.partition(), recordMetadata.offset(), recordMetadata.timestamp());
+                            } else{
+                                LOGGER.error("Failed to send weather data for location: {}", locationName, exception);
                             }
                         });
                     }
