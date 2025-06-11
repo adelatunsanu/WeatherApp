@@ -31,31 +31,34 @@ public class WeatherProducer {
 
         try (ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
              KafkaProducer<String, String> kafkaProducer = new KafkaProducer<>(properties)) {
+
             Runnable task = ()->{
                 LOGGER.info("Weather producer running. Fetching every 1 minute...");
-                try {
-                    List<Location> locations = getLocations();
-                    for (Location location:locations) {
-                        List<String> forecastList = OpenMeteoClient.getHourlyWeatherData(location);
-                        ProducerRecord<String, String> record;
-
-                        for (String jsonData : forecastList) {
-                            record = new ProducerRecord<>(TOPIC, location.name(), jsonData);
-                            kafkaProducer.send(record, new Callback() {
-                                @Override
-                                public void onCompletion (RecordMetadata recordMetadata, Exception e) {
-                                    // executes every time a record is successfully sent or when an exception is thrown
-                                    if (e == null){
-                                        LOGGER.info("Data: {} ----> Partition: {} Offset: {} Timestamp: {}", jsonData, recordMetadata.partition(), recordMetadata.offset(), recordMetadata.timestamp());
-                                    } else{
-                                        LOGGER.error("Error while producing", e);
-                                    }
-                                }
-                            });
-                        }
+                List<Location> locations = getLocations();
+                for (Location location:locations) {
+                    String locationName = location.name();
+                    List<String> forecastList;
+                    try {
+                        forecastList = OpenMeteoClient.getHourlyWeatherData(location);
+                    } catch (IOException e) {
+                        LOGGER.error("Failed to fetch weather data for location: {}", locationName, e);
+                        continue;
                     }
-                } catch (IOException e) {
-                    LOGGER.error("Error while producing", e);
+
+                    for (String jsonData : forecastList) {
+                        ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC, locationName, jsonData);
+
+                        kafkaProducer.send(record, new Callback() {
+                            @Override
+                            public void onCompletion (RecordMetadata recordMetadata, Exception exception) {
+                                if (exception == null){
+                                    LOGGER.info("Sent weather data: {} ----> Partition: {} Offset: {} Timestamp: {}", jsonData, recordMetadata.partition(), recordMetadata.offset(), recordMetadata.timestamp());
+                                } else{
+                                    LOGGER.error("Failed to send weather data for location: {}", locationName, exception);
+                                }
+                            }
+                        });
+                    }
                 }
             };
 
@@ -63,7 +66,8 @@ public class WeatherProducer {
 
             new CountDownLatch(1).await(); // Keep the main thread alive
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Thread.currentThread().interrupt();
+            LOGGER.error("Weather producer was interrupted", e);
         }
     }
 
