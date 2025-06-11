@@ -1,12 +1,14 @@
 package org.example;
 
 import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
+import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
 
@@ -36,8 +38,19 @@ public class WeatherConsumer {
                     LOGGER.warn("Shutdown hook interrupted", exception);
                 }
             }));
+            
+            kafkaConsumer.subscribe(List.of(TOPIC), new ConsumerRebalanceListener() {
 
-            kafkaConsumer.subscribe(List.of(TOPIC));
+                @Override
+                public void onPartitionsRevoked (Collection<TopicPartition> partitions) {
+                    LOGGER.info("Partitions revoked: {}", partitions);
+                }
+
+                @Override
+                public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
+                    LOGGER.info("Partitions assigned: {}", partitions);
+                }
+            });
 
             try {
                 while (true) {
