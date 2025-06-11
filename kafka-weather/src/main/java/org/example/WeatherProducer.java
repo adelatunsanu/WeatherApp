@@ -1,8 +1,6 @@
 package org.example;
 
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,8 +41,17 @@ public class WeatherProducer {
 
                         for (String jsonData : forecastList) {
                             record = new ProducerRecord<>(TOPIC, location.name(), jsonData);
-                            kafkaProducer.send(record);
-                            LOGGER.info("Sent to Kafka for location {} : {}", location.name(), jsonData);
+                            kafkaProducer.send(record, new Callback() {
+                                @Override
+                                public void onCompletion (RecordMetadata recordMetadata, Exception e) {
+                                    // executes every time a record is successfully sent or when an exception is thrown
+                                    if (e == null){
+                                        LOGGER.info("Data: {} ----> Partition: {} Offset: {} Timestamp: {}", jsonData, recordMetadata.partition(), recordMetadata.offset(), recordMetadata.timestamp());
+                                    } else{
+                                        LOGGER.error("Error while producing", e);
+                                    }
+                                }
+                            });
                         }
                     }
                 } catch (IOException e) {
