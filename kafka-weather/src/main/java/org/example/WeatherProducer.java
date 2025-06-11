@@ -36,7 +36,7 @@ public class WeatherProducer {
                 try {
                     List<Location> locations = getLocations();
                     for (Location location:locations) {
-                        List<String> forecastList = OpenMeteoClient.getHourlyWeatherData(location.latitude(), location.longitude());
+                        List<String> forecastList = OpenMeteoClient.getHourlyWeatherData(location);
                         ProducerRecord<String, String> record;
 
                         for (String jsonData : forecastList) {

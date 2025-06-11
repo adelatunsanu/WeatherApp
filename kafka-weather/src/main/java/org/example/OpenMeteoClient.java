@@ -62,21 +62,20 @@ public class OpenMeteoClient {
      * @return a list of strings, each representing one hour of forecast in JSON format.
      * @throws IOException if the weather data cannot be retrieved or parsed (e.g., network issues or malformed response)
      */
-    public static List<String> getHourlyWeatherData(double latitude, double longitude) throws IOException {
+    public static List<String> getHourlyWeatherData(Location location) throws IOException {
         List<String> forecastList = new ArrayList<>();
 
-        JsonNode root = fetchJsonNode(latitude, longitude);
+        JsonNode root = fetchJsonNode(location.latitude(), location.longitude());
         JsonNode times = root.path("hourly").path("time");
         JsonNode temps = root.path("hourly").path("temperature_2m");
         JsonNode rain = root.path("hourly").path("precipitation");
 
         for (int i = 0; i < times.size(); i++) {
             String json = String.format(
-                    "{\"time\":\"%s\", \"temperature\":%.2f, \"precipitation\":%.2f}",
-                    times.get(i).asText(),
-                    temps.get(i).asDouble(),
-                    rain.get(i).asDouble()
+                    "{\"location\":\"%s\", \"time\":\"%s\", \"temperature\":%.2f, \"precipitation\":%.2f}",
+                    location.name(), times.get(i).asText(), temps.get(i).asDouble(), rain.get(i).asDouble()
             );
+
             forecastList.add(json);
         }
         return forecastList;
