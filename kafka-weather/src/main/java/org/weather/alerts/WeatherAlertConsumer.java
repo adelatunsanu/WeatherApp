@@ -1,4 +1,4 @@
-package org.example;
+package org.weather.alerts;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,11 +1,11 @@
-package org.example;
+package org.weather.messaging;
 
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.*;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.weather.model.Location;
+import org.weather.client.OpenMeteoClient;
 
 import java.io.IOException;
 import java.util.List;

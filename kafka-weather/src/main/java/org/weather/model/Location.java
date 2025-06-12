@@ -1,4 +1,4 @@
-package org.example;
+package org.weather.model;
 
 /**
  * A record representing a geographical location by name, latitude and longitude.
