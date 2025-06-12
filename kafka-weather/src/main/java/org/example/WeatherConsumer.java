@@ -9,6 +9,8 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -55,8 +57,8 @@ public class WeatherConsumer {
             });
 
             try {
-                // Group temperatures by city
-                Map<String, List<Double>> temperaturePerCity = new HashMap<>();
+                // Group temperatures by city and by date
+                Map<String, Map<LocalDate, List<Double>>> tempPerCityPerDay = new HashMap<>();
 
                 while (true) {
                     ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofSeconds(1));
@@ -70,17 +72,23 @@ public class WeatherConsumer {
 
                         String city = record.key();
                         String json = record.value();
+
                         try{
                             JsonNode node = MAPPER.readTree(json);
+                            String dateTimeString = node.get("time").asText();
                             double temperature = node.get("temperature").asDouble();
 
-                            temperaturePerCity.computeIfAbsent(city, k -> new ArrayList<>()).add(temperature);
+                            LocalDate date = LocalDateTime.parse(dateTimeString).toLocalDate();
+                            tempPerCityPerDay
+                                    .computeIfAbsent(city, c -> new HashMap<>())
+                                    .computeIfAbsent(date, d -> new ArrayList<>())
+                                    .add(temperature);
                         } catch (Exception e) {
                             LOGGER.error("Failed to parse JSON for record: {}", json, e);
                         }
                     }
 
-                    calculateAverageTemperaturesPerCity(temperaturePerCity);
+                    calculateAverageTempPerCityPerDay(tempPerCityPerDay);
 
                 }
             } catch (WakeupException exception) {
@@ -103,18 +111,23 @@ public class WeatherConsumer {
         return properties;
     }
 
-    private static void calculateAverageTemperaturesPerCity(Map<String, List<Double>> tempPerCity){
-        for (Map.Entry<String, List<Double>> entry : tempPerCity.entrySet()) {
+    private static void calculateAverageTempPerCityPerDay(Map<String, Map<LocalDate, List<Double>>> tempPerCityPerDay){
+        for (var entry : tempPerCityPerDay.entrySet()) {
             String city = entry.getKey();
-            List<Double> temps = entry.getValue();
+            Map<LocalDate, List<Double>> dailyTemps = entry.getValue();
 
-            double avg = temps.stream()
-                    .mapToDouble(Double::doubleValue)
-                    .average()
-                    .orElse(Double.NaN);
+            for (var dateEntry : dailyTemps.entrySet()) {
+                LocalDate date = dateEntry.getKey();
+                List<Double> temps = dateEntry.getValue();
 
-            LOGGER.info("City: {} | Records received: {} | Average Temperature: {}°C",
-                    city, temps.size(), String.format("%.2f", avg));
+                double avg = temps.stream()
+                        .mapToDouble(Double::doubleValue)
+                        .average()
+                        .orElse(Double.NaN);
+
+                LOGGER.info("City: {} | Date: {} | Records processed: {} | Average Temperature: {}°C",
+                        city, date, temps.size(), String.format("%.2f", avg));
+            }
         }
     }
 }
