@@ -4,6 +4,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,17 +24,36 @@ public class WeatherAlertConsumer {
         Properties properties = getProperties();
 
         try(KafkaConsumer<String, String> consumer = new KafkaConsumer<>(properties)){
+            final Thread mainThread = Thread.currentThread();
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                LOGGER.info("Shutdown detected. Triggering Kafka consumer wakeup...");
+
+                consumer.wakeup();
+
+                try {
+                    mainThread.join();
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    LOGGER.warn("Shutdown hook interrupted", exception);
+                }
+            }));
+
             consumer.subscribe(List.of(TOPIC));
+            try {
+                while (true) {
+                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMinutes(1));
+                    if (records.isEmpty()) {
+                        continue;
+                    }
 
-            while (true){
-                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMinutes(1));
-                if (records.isEmpty()) {
-                    continue;
+                    for (ConsumerRecord<String, String> record : records) {
+                        LOGGER.info("Received alert data: {} ----> Partition: {} Offset: {} Timestamp: {}", record.value(), record.partition(), record.offset(), record.timestamp());
+                    }
                 }
-
-                for (ConsumerRecord<String, String> record:records){
-                    LOGGER.info("Received alert data: {} ----> Partition: {} Offset: {} Timestamp: {}", record.value(), record.partition(), record.offset(), record.timestamp());
-                }
+            } catch (WakeupException exception) {
+                LOGGER.info("Kafka consumer wakeup triggered. Shutting down gracefully...");
+            } finally {
+                LOGGER.info("Kafka consumer has been closed.");
             }
         }
     }
