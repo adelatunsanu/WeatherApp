@@ -80,7 +80,7 @@ public class WeatherConsumer {
 
                             LocalDate date = LocalDateTime.parse(dateTimeString).toLocalDate();
                             tempPerCityPerDay
-                                    .computeIfAbsent(city, c -> new HashMap<>())
+                                    .computeIfAbsent(city, c -> new TreeMap<>())
                                     .computeIfAbsent(date, d -> new ArrayList<>())
                                     .add(temperature);
                         } catch (Exception e) {
