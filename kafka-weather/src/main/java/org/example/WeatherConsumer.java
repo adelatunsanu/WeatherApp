@@ -61,6 +61,10 @@ public class WeatherConsumer {
                 while (true) {
                     ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofSeconds(1));
 
+                    if (records.isEmpty()) {
+                        continue; // skip to next poll, no messages received
+                    }
+
                     for (ConsumerRecord<String, String> record : records) {
                         LOGGER.info("Received weather data: {} ----> Partition: {} Offset: {} Timestamp: {}", record.value(), record.partition(), record.offset(), record.timestamp());
 
