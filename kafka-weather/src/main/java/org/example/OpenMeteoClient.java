@@ -57,8 +57,7 @@ public class OpenMeteoClient {
      * This method fetches and parses the hourly weather forecast, including timestamps, temperature (in °C),
      * and precipitation (in mm). Each hourly data point is returned as a JSON-formatted string.
      *
-     * @param latitude  the geographic latitude.
-     * @param longitude the geographic longitude.
+     * @param location  the geographical {@code Location}.
      * @return a list of strings, each representing one hour of forecast in JSON format.
      * @throws IOException if the weather data cannot be retrieved or parsed (e.g., network issues or malformed response)
      */
