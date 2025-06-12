@@ -1,5 +1,6 @@
 package org.example;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -29,7 +30,7 @@ public class WeatherConsumer {
     private static final String KAFKA_SERVER = "localhost:9092";
     private static final String GROUP_ID = "weather-consumer-group";
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final double PRECIPITATION_THRESHOLD = 5.0;
+    private static final double PRECIPITATION_THRESHOLD = -1.0;
 
     public static void main (String[] args) {
         Properties consumerProperties = getConsumerProperties();
@@ -76,6 +77,8 @@ public class WeatherConsumer {
                         continue; // skip to next poll, no messages received
                     }
 
+                    Map<String, Double> rainAlerts = new HashMap<>();
+
                     for (ConsumerRecord<String, String> record : records) {
                         LOGGER.info("Received weather data: {} ----> Partition: {} Offset: {} Timestamp: {}", record.value(), record.partition(), record.offset(), record.timestamp());
 
@@ -94,23 +97,9 @@ public class WeatherConsumer {
                                     .computeIfAbsent(date, d -> new ArrayList<>())
                                     .add(temperature);
 
-                            // Check for alert condition
+                            // Flag this city for alert if needed
                             if (precipitation > PRECIPITATION_THRESHOLD) {
-                                ObjectNode alert = MAPPER.createObjectNode();
-                                alert.put("city", city);
-                                alert.put("time", dateTimeString);
-                                alert.put("precipitation", precipitation);
-                                alert.put("alert", "Heavy precipitation forecasted");
-
-                                String alertJson = MAPPER.writeValueAsString(alert);
-                                ProducerRecord<String, String> alertRecord = new ProducerRecord<>(TOPIC_ALERTS, city, alertJson);
-                                alertProducer.send(alertRecord, (metadata, exception) -> {
-                                    if (exception == null) {
-                                        LOGGER.info("Alert sent for {} at {}: {} mm ----> Partition: {} Offset: {} Timestamp: {}", city, dateTimeString, precipitation, metadata.partition(), metadata.offset(), metadata.timestamp());
-                                    } else {
-                                        LOGGER.error("Failed to send alert", exception);
-                                    }
-                                });
+                                rainAlerts.put(city, precipitation);
                             }
                         } catch (Exception e) {
                             LOGGER.error("Failed to parse JSON for record: {}", json, e);
@@ -118,7 +107,7 @@ public class WeatherConsumer {
                     }
 
                     calculateAverageTempPerCityPerDay(tempPerCityPerDay);
-
+                    checkRainAlerts(rainAlerts, alertProducer);
                 }
             } catch (WakeupException exception) {
                 LOGGER.info("Kafka consumer wakeup triggered. Shutting down gracefully...");
@@ -166,5 +155,31 @@ public class WeatherConsumer {
                         city, date, temps.size(), String.format("%.2f", avg));
             }
         }
+    }
+
+    private static void checkRainAlerts(Map<String, Double> rainAlerts, KafkaProducer<String, String> alertProducer) throws JsonProcessingException {
+        for (Map.Entry<String, Double> entry : rainAlerts.entrySet()) {
+
+            String city = entry.getKey();
+            String alertJson = getRainAlert(entry);
+
+            alertProducer.send(new ProducerRecord<>(TOPIC_ALERTS, city, alertJson), (metadata, exception) -> {
+                if (exception == null) {
+                    LOGGER.info("Alert data sent: {} ----> Partition: {} Offset: {} Timestamp: {}", alertJson, metadata.partition(), metadata.offset(), metadata.timestamp());
+                } else {
+                    LOGGER.error("Failed to send alert for {}", city, exception);
+                }
+            });
+        }
+    }
+
+    private static String getRainAlert(Map.Entry<String, Double> entry) throws JsonProcessingException {
+        String city = entry.getKey();
+        ObjectNode alert = MAPPER.createObjectNode();
+        alert.put("city", city);
+        alert.put("alert", "Heavy precipitation forecasted");
+        alert.put("precipitation", entry.getValue());
+
+        return MAPPER.writeValueAsString(alert);
     }
 }
