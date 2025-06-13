@@ -2,6 +2,7 @@ package org.weather.alerts;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.cdimascio.dotenv.Dotenv;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -11,6 +12,12 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
@@ -22,6 +29,10 @@ public class WeatherAlertConsumer {
     private static final String KAFKA_SERVER = "localhost:9092";
     private static final String GROUP_ID = "weather-alerts-consumer-group";
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    private static final Dotenv DOT_ENV = Dotenv.load(); // Auto-loads from project root
+    private static final String PUSHOVER_USER_KEY = DOT_ENV.get("PUSHOVER_USER");
+    private static final String PUSHOVER_APP_TOKEN = DOT_ENV.get("PUSHOVER_TOKEN");
 
     public static void main (String[] args) {
         Properties properties = getProperties();
@@ -85,7 +96,23 @@ public class WeatherAlertConsumer {
     }
 
     private static void sendNotification(String city, String alertMsg, double precipitation) {
-        // TODO - For now just log in console
-        LOGGER.warn("⚠️ ALERT for {}: {} | Precipitation: {} mm", city, alertMsg, precipitation);
+        try{
+            String message = String.format("🌧️ Alert for %s: %s (%.2f mm)", city, alertMsg, precipitation);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.pushover.net/1/messages.json"))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .POST(HttpRequest.BodyPublishers.ofString(
+                            "token=" + PUSHOVER_APP_TOKEN +
+                                    "&user=" + PUSHOVER_USER_KEY +
+                                    "&message=" + URLEncoder.encode(message, StandardCharsets.UTF_8)))
+                    .build();
+
+            HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.discarding());
+
+            LOGGER.info("📲 Pushover notification sent: {}", message);
+        } catch (Exception e) {
+            LOGGER.error("Failed to send Pushover notification", e);
+        }
     }
 }

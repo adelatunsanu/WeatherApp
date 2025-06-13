@@ -21,6 +21,9 @@ dependencies {
 
     // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
     implementation("com.fasterxml.jackson.core:jackson-databind:2.19.0")
+
+    // https://mvnrepository.com/artifact/io.github.cdimascio/java-dotenv
+    implementation("io.github.cdimascio:java-dotenv:5.2.2")
 }
 
 tasks.test {
