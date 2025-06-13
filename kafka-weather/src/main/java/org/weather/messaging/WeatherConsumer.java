@@ -30,7 +30,7 @@ public class WeatherConsumer {
     private static final String KAFKA_SERVER = "localhost:9092";
     private static final String GROUP_ID = "weather-consumer-group";
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final double PRECIPITATION_THRESHOLD = -1.0;
+    private static final double PRECIPITATION_THRESHOLD = 5.0;
 
     public static void main (String[] args) {
         Properties consumerProperties = getConsumerProperties();
