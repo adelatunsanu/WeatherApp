@@ -30,7 +30,7 @@ public class WeatherConsumer {
     private static final String KAFKA_SERVER = "localhost:9092";
     private static final String GROUP_ID = "weather-consumer-group";
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final double PRECIPITATION_THRESHOLD = 5.0;
+    private static final double PRECIPITATION_THRESHOLD = -1.0;
 
     public static void main (String[] args) {
         Properties consumerProperties = getConsumerProperties();
@@ -77,7 +77,7 @@ public class WeatherConsumer {
                         continue; // skip to next poll, no messages received
                     }
 
-                    Map<String, Double> rainAlerts = new HashMap<>();
+                    Map<String, Map<LocalDate, Double>> rainAlerts = new HashMap<>();
 
                     for (ConsumerRecord<String, String> record : records) {
                         LOGGER.info("Received weather data: {} ----> Partition: {} Offset: {} Timestamp: {}", record.value(), record.partition(), record.offset(), record.timestamp());
@@ -99,7 +99,9 @@ public class WeatherConsumer {
 
                             // Flag this city for alert if needed
                             if (precipitation > PRECIPITATION_THRESHOLD) {
-                                rainAlerts.put(city, precipitation);
+                                rainAlerts
+                                        .computeIfAbsent(city, c -> new HashMap<>())
+                                        .put(date, precipitation);
                             }
                         } catch (Exception e) {
                             LOGGER.error("Failed to parse JSON for record: {}", json, e);
@@ -157,28 +159,32 @@ public class WeatherConsumer {
         }
     }
 
-    private static void checkRainAlerts(Map<String, Double> rainAlerts, KafkaProducer<String, String> alertProducer) throws JsonProcessingException {
-        for (Map.Entry<String, Double> entry : rainAlerts.entrySet()) {
+    private static void checkRainAlerts(Map<String, Map<LocalDate, Double>> rainAlerts, KafkaProducer<String, String> alertProducer) throws JsonProcessingException {
+        for (Map.Entry<String, Map<LocalDate, Double>> cityEntry : rainAlerts.entrySet()) {
+            String city = cityEntry.getKey();
 
-            String city = entry.getKey();
-            String alertJson = getRainAlert(entry);
+            for (Map.Entry<LocalDate, Double> dateEntry : cityEntry.getValue().entrySet()) {
+                LocalDate date = dateEntry.getKey();
+                double precipitation = dateEntry.getValue();
+                String alertJson = getRainAlert(city, date, precipitation);
 
-            alertProducer.send(new ProducerRecord<>(TOPIC_ALERTS, city, alertJson), (metadata, exception) -> {
-                if (exception == null) {
-                    LOGGER.info("Alert data sent: {} ----> Partition: {} Offset: {} Timestamp: {}", alertJson, metadata.partition(), metadata.offset(), metadata.timestamp());
-                } else {
-                    LOGGER.error("Failed to send alert for {}", city, exception);
-                }
-            });
+                alertProducer.send(new ProducerRecord<>(TOPIC_ALERTS, city, alertJson), (metadata, exception) -> {
+                    if (exception == null) {
+                        LOGGER.info("Alert data sent: {} ----> Partition: {} Offset: {} Timestamp: {}", alertJson, metadata.partition(), metadata.offset(), metadata.timestamp());
+                    } else {
+                        LOGGER.error("Failed to send alert for {}", city, exception);
+                    }
+                });
+            }
         }
     }
 
-    private static String getRainAlert(Map.Entry<String, Double> entry) throws JsonProcessingException {
-        String city = entry.getKey();
+    private static String getRainAlert(String city, LocalDate date, double precipitation) throws JsonProcessingException {
         ObjectNode alert = MAPPER.createObjectNode();
         alert.put("city", city);
+        alert.put("date", date.toString());
         alert.put("alert", "Heavy precipitation forecasted");
-        alert.put("precipitation", entry.getValue());
+        alert.put("precipitation", precipitation);
 
         return MAPPER.writeValueAsString(alert);
     }
