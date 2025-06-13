@@ -30,7 +30,7 @@ public class WeatherConsumer {
     private static final String KAFKA_SERVER = "localhost:9092";
     private static final String GROUP_ID = "weather-consumer-group";
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final double PRECIPITATION_THRESHOLD = -1.0;
+    private static final double PRECIPITATION_THRESHOLD = 5.0;
 
     public static void main (String[] args) {
         Properties consumerProperties = getConsumerProperties();
@@ -100,7 +100,7 @@ public class WeatherConsumer {
                             // Flag this city for alert if needed
                             if (precipitation > PRECIPITATION_THRESHOLD) {
                                 rainAlerts
-                                        .computeIfAbsent(city, c -> new HashMap<>())
+                                        .computeIfAbsent(city, c -> new TreeMap<>())
                                         .put(date, precipitation);
                             }
                         } catch (Exception e) {
