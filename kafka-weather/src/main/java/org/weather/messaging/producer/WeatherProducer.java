@@ -1,10 +1,14 @@
 package org.weather.messaging.producer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.weather.model.Location;
+
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -48,13 +52,16 @@ public class WeatherProducer {
         }
     }
 
-    private static List<Location> getLocations(){
-        return List.of(
-                new Location("Thassos - Skala Rachoniou", 40.7794, 24.6124),
-                new Location("Athens", 37.9838, 23.7275),
-                new Location("Santorini", 36.393154, 25.461510),
-                new Location("Thessaloniki", 40.6401, 22.9444)
-        );
+    private static List<Location> getLocations() {
+        ObjectMapper mapper = new ObjectMapper();
+        try (InputStream inputStream = WeatherProducer.class.getClassLoader().getResourceAsStream("locations.json")) {
+            if (inputStream == null) {
+                throw new IllegalStateException("Could not find locations.json");
+            }
+            return List.of(mapper.readValue(inputStream, Location[].class));
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load locations from file", e);
+        }
     }
 
     private static Properties getProperties () {
