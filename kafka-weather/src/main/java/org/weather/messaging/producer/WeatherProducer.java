@@ -1,13 +1,10 @@
-package org.weather.messaging;
+package org.weather.messaging.producer;
 
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.weather.model.Location;
-import org.weather.client.OpenMeteoClient;
-
-import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -37,28 +34,9 @@ public class WeatherProducer {
             Runnable task = ()->{
                 LOGGER.info("Weather producer running. Fetching every 1 minute...");
                 List<Location> locations = getLocations();
-                for (Location location:locations) {
-                    String locationName = location.name();
-                    List<String> forecastList;
-                    try {
-                        forecastList = OpenMeteoClient.getHourlyWeatherData(location);
-                    } catch (IOException e) {
-                        LOGGER.error("Failed to fetch weather data for location: {}", locationName, e);
-                        continue;
-                    }
 
-                    for (String jsonData : forecastList) {
-                        ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC, locationName, jsonData);
-
-                        kafkaProducer.send(record, (recordMetadata, exception) -> {
-                            if (exception == null){
-                                LOGGER.info("Sent weather data: {} ----> Partition: {} Offset: {} Timestamp: {}", jsonData, recordMetadata.partition(), recordMetadata.offset(), recordMetadata.timestamp());
-                            } else{
-                                LOGGER.error("Failed to send weather data for location: {}", locationName, exception);
-                            }
-                        });
-                    }
-                }
+                WeatherDataPublisher dataPublisher = new WeatherDataPublisher(kafkaProducer, locations, TOPIC );
+                dataPublisher.publishWeatherData();
             };
 
             executorService.scheduleAtFixedRate(task, 0, 1, TimeUnit.MINUTES);
