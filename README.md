@@ -19,7 +19,8 @@ A Java-based Kafka-powered weather monitoring application that:
 
 - Java 21
 - Apache Kafka 3.9.0 (running in WSL)
-- Jackson (for JSON parsing)
+- MySQL 8.0 (database for storing data)
+- [MySQL Connector/J](https://dev.mysql.com/downloads/connector/j/) (JDBC driver)
 - Pushover API
 - [Open-Meteo](https://open-meteo.com/)
 
@@ -55,5 +56,25 @@ Create a file named .env in the root of your project:
     ├── build.gradle
 
 ##### Contents of .env File:
-    PUSHOVER_TOKEN=your-app-token-here 
-    PUSHOVER_USER=your-user-key-here
+
+```properties
+PUSHOVER_TOKEN=your-app-token-here 
+PUSHOVER_USER=your-user-key-here
+```
+
+## 🗄️ Database Configuration
+
+This project uses a helper class called `DBConnector` to connect to a MySQL database.  
+Connection settings are loaded from a `db.properties` file located in `src/main/resources`.
+
+### 📁 Example `db.properties`
+
+```properties
+db.url=jdbc:mysql://localhost:3306/weather_app
+db.username=root
+db.password=yourpassword
+```
+
+
+
+
