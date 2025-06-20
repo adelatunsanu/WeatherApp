@@ -41,4 +41,8 @@ bin/
 ### Mac OS ###
 .DS_Store
 
+# Ignore Pushover configuration
 .env
+
+# Ignore database configuration
+**/db.properties
