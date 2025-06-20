@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -37,20 +38,33 @@ public class LocationImporter {
             // deserialize file into List<Location>
             List<Location> locations = mapper.readValue(input, new TypeReference<>() {});
 
+            String checkSql = "SELECT COUNT(*) FROM locations WHERE name = ?";
             String insertSql  = "INSERT INTO locations (name, latitude, longitude) VALUES (?, ?, ?)";
 
             assert connection != null;
 
+            PreparedStatement checkStmt = connection.prepareStatement(checkSql);
             PreparedStatement insertStmt = connection.prepareStatement(insertSql);
 
-            for (Location loc : locations) {
-                insertStmt.setString(1, loc.name());
-                insertStmt.setDouble(2, loc.latitude());
-                insertStmt.setDouble(3, loc.longitude());
-                insertStmt.executeUpdate();
+            for (Location location : locations) {
+                checkStmt.setString(1, location.name());
+                ResultSet rs = checkStmt.executeQuery();
+                rs.next();
+                int count = rs.getInt(1);
+                rs.close();
+
+                if (count == 0) {
+                    insertStmt.setString(1, location.name());
+                    insertStmt.setDouble(2, location.latitude());
+                    insertStmt.setDouble(3, location.longitude());
+                    insertStmt.executeUpdate();
+                    LOGGER.info("Inserted: {}", location.name());
+                } else {
+                    LOGGER.info("Skipped (already exists): {}", location.name());
+                }
             }
 
-            LOGGER.info("Inserted {} locations into the database.", locations.size());
+            LOGGER.info("Import complete.");
         } catch (SQLException e) {
             LOGGER.error("DB connection error", e);
         } catch (IOException e) {
