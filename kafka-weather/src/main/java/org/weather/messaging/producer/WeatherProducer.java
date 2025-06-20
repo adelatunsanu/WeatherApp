@@ -1,14 +1,20 @@
 package org.weather.messaging.producer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mysql.cj.jdbc.MysqlDataSource;
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.weather.db.DBConnector;
 import org.weather.model.Location;
 
+import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -30,6 +36,8 @@ public class WeatherProducer {
     private static final String KAFKA_SERVER = "localhost:9092";
 
     public static void main (String[] args) {
+        startDBConnection();
+
         Properties properties = getProperties();
 
         try (ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
@@ -49,6 +57,20 @@ public class WeatherProducer {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             LOGGER.error("Weather producer was interrupted", e);
+        }
+    }
+
+    private static void startDBConnection(){
+        //  Test DB connection
+        try (Connection connection = DBConnector.getConnection()) {
+            if (connection == null || connection.isClosed()) {
+                throw new IllegalStateException("Database connection is null or closed.");
+            }
+            LOGGER.info("Successfully connected to database.");
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to connect to the database.", e);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load DB configuration from properties file.", e);
         }
     }
 

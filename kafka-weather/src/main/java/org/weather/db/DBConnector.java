@@ -26,13 +26,10 @@ public class DBConnector {
      *
      * @return a {@link Connection} to the configured MySQL database, or {@code null} if the connection fails
      */
-    public static Connection getConnection() {
-        Connection connection = null;
-
+    public static Connection getConnection()  throws SQLException, IOException {
         try (InputStream input = DBConnector.class.getClassLoader().getResourceAsStream("db.properties")) {
             if (input == null) {
-                LOGGER.error("Unable to find db.properties file.");
-                return null;
+                throw new IOException("db.properties file not found in resources.");
             }
 
             Properties property = new Properties();
@@ -44,13 +41,7 @@ public class DBConnector {
 
             var dataSource = new MysqlDataSource();
             dataSource.setURL(url);
-            connection = dataSource.getConnection(username, password);
-            LOGGER.info("Connection to database established");
-        } catch (IOException e) {
-            LOGGER.error("Failed to load db.properties file.", e);
-        } catch (SQLException e) {
-            LOGGER.error("Failed to establish a database connection.", e);
+            return dataSource.getConnection(username, password);
         }
-        return connection;
     }
 }
