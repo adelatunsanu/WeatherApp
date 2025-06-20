@@ -31,7 +31,7 @@ public class DBConnector {
 
         try (InputStream input = DBConnector.class.getClassLoader().getResourceAsStream("db.properties")) {
             if (input == null) {
-                LOGGER.error("Unable to find db.properties");
+                LOGGER.error("Unable to find db.properties file.");
                 return null;
             }
 
@@ -46,8 +46,10 @@ public class DBConnector {
             dataSource.setURL(url);
             connection = dataSource.getConnection(username, password);
             LOGGER.info("Connection to database established");
-        } catch(SQLException | IOException e){
-            LOGGER.error("Connection to database failed", e);
+        } catch (IOException e) {
+            LOGGER.error("Failed to load db.properties file.", e);
+        } catch (SQLException e) {
+            LOGGER.error("Failed to establish a database connection.", e);
         }
         return connection;
     }
