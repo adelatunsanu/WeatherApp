@@ -1,21 +1,13 @@
 package org.weather.messaging.producer;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mysql.cj.jdbc.MysqlDataSource;
-import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.weather.db.DBConnector;
 import org.weather.model.Location;
 import org.weather.model.LocationImporter;
 
-import javax.sql.DataSource;
-import java.io.IOException;
-import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
