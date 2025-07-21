@@ -13,6 +13,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -74,5 +75,37 @@ public class LocationImporter {
         } catch (IOException e) {
             LOGGER.error("Failed to insert data", e);
         }
+    }
+
+    /**
+     * Retrieves all locations stored in the database.
+     * @return a list of {@link Location} instances representing all locations in the database;
+     *         never {@code null}, but possibly empty if no records exist or on error.
+     */
+    public static List<Location> getLocationsFromDB() {
+        List<Location> locations = new ArrayList<>();
+
+        String query = "SELECT name, latitude, longitude FROM locations";
+
+        try (Connection connection = DBConnector.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(query);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                String name = rs.getString("name");
+                double latitude = rs.getDouble("latitude");
+                double longitude = rs.getDouble("longitude");
+
+                Location location = new Location(name, latitude, longitude);
+                locations.add(location);
+            }
+
+            LOGGER.info("Retrieved {} locations from the database.", locations.size());
+        } catch (SQLException e) {
+            LOGGER.error("Error retrieving locations from the database", e);
+        } catch (IOException e) {
+            LOGGER.error("Failed to retrieve data", e);
+        }
+        return locations;
     }
 }
