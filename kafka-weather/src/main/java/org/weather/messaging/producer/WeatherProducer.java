@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.weather.db.DBConnector;
 import org.weather.model.Location;
+import org.weather.model.LocationImporter;
 
 import javax.sql.DataSource;
 import java.io.IOException;
@@ -36,8 +37,6 @@ public class WeatherProducer {
     private static final String KAFKA_SERVER = "localhost:9092";
 
     public static void main (String[] args) {
-        startDBConnection();
-
         Properties properties = getProperties();
 
         try (ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
@@ -45,7 +44,7 @@ public class WeatherProducer {
 
             Runnable task = ()->{
                 LOGGER.info("Weather producer running. Fetching every 1 minute...");
-                List<Location> locations = getLocations();
+                List<Location> locations = LocationImporter.getLocationsFromDB();
 
                 WeatherDataPublisher dataPublisher = new WeatherDataPublisher(kafkaProducer, locations, TOPIC );
                 dataPublisher.publishWeatherData();
@@ -57,32 +56,6 @@ public class WeatherProducer {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             LOGGER.error("Weather producer was interrupted", e);
-        }
-    }
-
-    private static void startDBConnection(){
-        //  Test DB connection
-        try (Connection connection = DBConnector.getConnection()) {
-            if (connection == null || connection.isClosed()) {
-                throw new IllegalStateException("Database connection is null or closed.");
-            }
-            LOGGER.info("Successfully connected to database.");
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to connect to the database.", e);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load DB configuration from properties file.", e);
-        }
-    }
-
-    private static List<Location> getLocations() {
-        ObjectMapper mapper = new ObjectMapper();
-        try (InputStream inputStream = WeatherProducer.class.getClassLoader().getResourceAsStream("locations.json")) {
-            if (inputStream == null) {
-                throw new IllegalStateException("Could not find locations.json");
-            }
-            return List.of(mapper.readValue(inputStream, Location[].class));
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load locations from file", e);
         }
     }
 
