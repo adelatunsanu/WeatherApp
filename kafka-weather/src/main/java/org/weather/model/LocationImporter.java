@@ -27,6 +27,10 @@ public class LocationImporter {
     private static final Logger LOGGER = LoggerFactory.getLogger(LocationImporter.class.getSimpleName());
 
     public static void main (String[] args) {
+        insertDataInDB();
+    }
+
+    private static void insertDataInDB(){
         try (Connection connection = DBConnector.getConnection();
              InputStream input = LocationImporter.class.getClassLoader().getResourceAsStream("locations.json")) {
 
@@ -35,38 +39,38 @@ public class LocationImporter {
             }
 
             ObjectMapper mapper = new ObjectMapper();
-            // deserialize file into List<Location>
             List<Location> locations = mapper.readValue(input, new TypeReference<>() {});
 
             String checkSql = "SELECT COUNT(*) FROM locations WHERE name = ?";
             String insertSql  = "INSERT INTO locations (name, latitude, longitude) VALUES (?, ?, ?)";
 
-            assert connection != null;
+            try (PreparedStatement checkStmt = connection.prepareStatement(checkSql);
+                 PreparedStatement insertStmt = connection.prepareStatement(insertSql)) {
+                for (Location location : locations) {
+                    if (location.name() == null) {
+                        LOGGER.warn("Skipped location with null name.");
+                        continue;
+                    }
 
-            PreparedStatement checkStmt = connection.prepareStatement(checkSql);
-            PreparedStatement insertStmt = connection.prepareStatement(insertSql);
-
-            for (Location location : locations) {
-                checkStmt.setString(1, location.name());
-                ResultSet rs = checkStmt.executeQuery();
-                rs.next();
-                int count = rs.getInt(1);
-                rs.close();
-
-                if (count == 0) {
-                    insertStmt.setString(1, location.name());
-                    insertStmt.setDouble(2, location.latitude());
-                    insertStmt.setDouble(3, location.longitude());
-                    insertStmt.executeUpdate();
-                    LOGGER.info("Inserted: {}", location.name());
-                } else {
-                    LOGGER.info("Skipped (already exists): {}", location.name());
+                    checkStmt.setString(1, location.name());
+                    try (ResultSet rs = checkStmt.executeQuery()) {
+                        rs.next();
+                        if (rs.getInt(1) == 0) {
+                            insertStmt.setString(1, location.name());
+                            insertStmt.setDouble(2, location.latitude());
+                            insertStmt.setDouble(3, location.longitude());
+                            insertStmt.executeUpdate();
+                            LOGGER.info("Inserted: {}", location.name());
+                        } else {
+                            LOGGER.info("Skipped (already exists): {}", location.name());
+                        }
+                    }
                 }
             }
 
             LOGGER.info("Import complete.");
         } catch (SQLException e) {
-            LOGGER.error("DB connection error", e);
+            LOGGER.error("Failed to connect to the database or while inserting data.", e);
         } catch (IOException e) {
             LOGGER.error("Failed to insert data", e);
         }
