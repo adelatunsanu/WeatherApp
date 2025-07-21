@@ -22,6 +22,9 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
 
+/**
+ * The {@code WeatherAlertConsumer} class is a Kafka consumer for weather alert messages from a Kafka topic and sends notifications via the Pushover API.
+ */
 public class WeatherAlertConsumer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WeatherAlertConsumer.class.getSimpleName());
