@@ -39,6 +39,20 @@ public class LocationImporter {
                 throw new FileNotFoundException("Could not find 'locations.json' in classpath.");
             }
 
+            String createTableSql = """
+                CREATE TABLE IF NOT EXISTS locations (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL UNIQUE,
+                    latitude DOUBLE NOT NULL,
+                    longitude DOUBLE NOT NULL
+                )
+                """;
+
+            try (PreparedStatement createTableStmt = connection.prepareStatement(createTableSql)) {
+                createTableStmt.execute();
+                LOGGER.info("Checked or created 'locations' table.");
+            }
+
             ObjectMapper mapper = new ObjectMapper();
             List<Location> locations = mapper.readValue(input, new TypeReference<>() {});
 
@@ -47,6 +61,7 @@ public class LocationImporter {
 
             try (PreparedStatement checkStmt = connection.prepareStatement(checkSql);
                  PreparedStatement insertStmt = connection.prepareStatement(insertSql)) {
+
                 for (Location location : locations) {
                     if (location.name() == null) {
                         LOGGER.warn("Skipped location with null name.");
